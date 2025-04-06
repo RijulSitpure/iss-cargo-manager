@@ -1,0 +1,7 @@
+npm install
+npm start
+
+http://localhost:8000 --> the localhost server 
+
+Sample CSV Files for Testing are items.csv and containers.csv 
+Create these files in your backend folder for testing imports

@@ -1,0 +1,4 @@
+containerId,zone,width,depth,height
+contA,Crew Quarters,100,85,200
+contB,Airlock,50,85,200
+contC,Medical Bay,75,60,180
