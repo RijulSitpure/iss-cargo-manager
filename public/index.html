@@ -435,30 +435,26 @@ label {
         </div>
     </section>
 
-    <!-- Quick Actions Section -->
-    <section class="animate-slide-up">
-        <h2 class="text-2xl font-semibold mb-4 flex items-center">
-            <i class="fas fa-bolt text-blue-400 mr-2"></i> Quick Actions
-        </h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button onclick="addDays(1)" class="quick-action-btn bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors">
-                <i class="fas fa-forward mr-2"></i> +1 Day
-            </button>
-            <button onclick="addDays(7)" class="quick-action-btn bg-purple-700 hover:bg-purple-800 text-white py-2 px-4 rounded-lg transition-colors">
-                <i class="fas fa-fast-forward mr-2"></i> +7 Days
-            </button>
-            <button onclick="toggleLogs()" class="quick-action-btn bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors">
-                <span class="flex items-center justify-center">
-                    <i class="fas fa-history mr-2"></i> View Logs
-                </span>
-            </button>
-            <button onclick="generateReport()" id="report-btn" class="quick-action-btn bg-cyan-600 hover:bg-cyan-700 text-white py-2 px-4 rounded-lg transition-colors">
-                <span class="flex items-center justify-center">
-                    <i class="fas fa-file-alt mr-2"></i> Generate Report
-                </span>
-            </button>
-        </div>
-    </section>
+   <!-- Quick Actions Section -->
+<section class="animate-slide-up">
+    <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <i class="fas fa-bolt text-blue-400 mr-2"></i> Quick Actions
+    </h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button onclick="simulateDays(1)" class="bg-purple-600 hover:bg-purple-700 text-white">
+            <i class="fas fa-forward"></i> +1 Day
+        </button>
+        <button onclick="simulateDays(7)" class="bg-purple-700 hover:bg-purple-800 text-white">
+            <i class="fas fa-fast-forward"></i> +7 Days
+        </button>
+        <button onclick="viewLogs()" class="bg-gray-600 hover:bg-gray-700 text-white">
+            <i class="fas fa-history"></i> View Logs
+        </button>
+        <button onclick="generateReport()" class="bg-cyan-600 hover:bg-cyan-700 text-white">
+            <i class="fas fa-file-alt"></i> Generate Report
+        </button>
+    </div>
+</section>
 
     <!-- Visualization Section -->
     <section class="animate-slide-up">
@@ -665,24 +661,11 @@ label {
 </div>
 </div>
 
-<!-- Logs Container (initially hidden) -->
-<div id="logs-container" class="hidden mt-6 bg-gray-100 p-4 rounded-lg">
-    <div class="flex justify-between items-center mb-3">
-        <h3 class="text-lg font-medium">
-            <i class="fas fa-scroll mr-2 text-gray-600"></i>System Logs
-        </h3>
-        <button onclick="toggleLogs()" class="text-gray-500 hover:text-gray-700">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    <div id="logs-content" class="bg-white p-3 rounded-md overflow-auto max-h-80">
-        <!-- Logs will be loaded here -->
-    </div>
-</div>
+
 
 
 <!-- Toast Container -->
-<div id="toast" class="fixed bottom-4 right-4 hidden bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+<div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
     <div class="flex items-center">
         <i class="fas fa-check-circle mr-2"></i>
         <span id="toast-message"></span>
@@ -723,32 +706,57 @@ label {
         const hideLoading = () => state.loading.classList.add('hidden');
 
         const showToast = (message, type = 'success', duration = 3000) => {
-            const toast = document.createElement('div');
-            toast.className = `p-4 rounded-md shadow-lg flex items-start animate-fade-in ${
-                type === 'success' ? 'bg-green-600' : 
-                type === 'error' ? 'bg-red-600' : 
-                type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600'
-            }`;
-            
-            const icon = type === 'success' ? 'fa-check-circle' : 
-                        type === 'error' ? 'fa-exclamation-circle' : 
-                        type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
-            
-            toast.innerHTML = `
-                <i class="fas ${icon} mr-2 mt-0.5"></i>
-                <div>
-                    <p class="font-medium">${message}</p>
-                    <p class="text-xs opacity-80 mt-1">${new Date().toLocaleTimeString()}</p>
-                </div>
-            `;
-            
-            state.toastContainer.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
-        };
+    // Get or create toast container
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'fixed bottom-4 right-4 z-50 space-y-2';
+        document.body.appendChild(toastContainer);
+    }
 
+    // Create new toast element
+    const toast = document.createElement('div');
+    toast.className = `p-4 rounded-md shadow-lg flex items-start animate-fade-in ${
+        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' : 
+        type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600'
+    } text-white max-w-xs`;
+    
+    const icon = type === 'success' ? 'fa-check-circle' : 
+                type === 'error' ? 'fa-exclamation-circle' : 
+                type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+    
+    toast.innerHTML = `
+        <i class="fas ${icon} mr-2 mt-0.5 flex-shrink-0"></i>
+        <div class="flex-grow">
+            <p class="font-medium">${message}</p>
+            <p class="text-xs opacity-80 mt-1">${new Date().toLocaleTimeString()}</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Append the new toast to the container
+    toastContainer.appendChild(toast);
+
+    // Set a timeout to remove the toast after the specified duration
+    const removeToast = () => {
+        toast.classList.add('animate-fade-out');
+        setTimeout(() => toast.remove(), 300);
+    };
+
+    const timeoutId = setTimeout(removeToast, duration);
+    
+    // Allow manual dismissal
+    toast.addEventListener('click', (e) => {
+        if (e.target.closest('button')) {
+            clearTimeout(timeoutId);
+            removeToast();
+        }
+    });
+};
         const logToConsole = (message, type = 'info') => {
             const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
             const prefix = type === 'error' ? '[ERROR]' : 
