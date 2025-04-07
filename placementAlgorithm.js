@@ -43,4 +43,47 @@ const placeItems = (items, containers) => {
     return { placements, updatedContainers: Array.from(containerMap.values()) };
 };
 
-module.exports = { placeItems };
+function suggestPlacement(item, storageLayout) {
+    const { containers } = storageLayout;
+    const zonesByPriority = ['A', 'B', 'C'];
+    const itemVolume = item.width * item.depth * item.height;
+
+    for (const zone of zonesByPriority) {
+        const suitableContainer = containers.find(container => {
+            const containerZone = container.zone?.trim();
+            const containerVolume = container.width * container.depth * container.height;
+            const usedVolume = typeof container.usedVolume === 'number'
+                ? container.usedVolume
+                : parseFloat(container.usedVolume) || 0;
+
+            return (
+                containerZone === zone &&
+                usedVolume + itemVolume <= containerVolume
+            );
+        });
+
+        if (suitableContainer) {
+            return {
+                action: 'place',
+                location: { containerId: suitableContainer.containerId },
+                reason: `Placed in Zone ${zone}`,
+                message: `Placed in Zone ${zone}`
+            };
+        }
+    }
+
+    return {
+        action: 'reject',
+        location: null,
+        reason: 'No available space for item',
+        message: 'No available space for item'
+    };
+}
+
+  
+
+  module.exports = {
+    suggestPlacement,
+    placeItems
+  };
+  

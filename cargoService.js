@@ -1,5 +1,6 @@
 const { query, run } = require('./database');
-const { placeItems } = require('./placementAlgorithm');
+const { suggestPlacement, placeItems } = require('./placementAlgorithm');
+
 const { parse } = require('csv-parse/sync');
 
 class CargoService {
@@ -43,20 +44,103 @@ class CargoService {
     
         for (const container of containers) {
             await run(`
-                INSERT OR REPLACE INTO containers (containerId, zone, width, depth, height)
-                VALUES (?, ?, ?, ?, ?)
-            `, [
+                INSERT OR REPLACE INTO containers (containerId, zone, width, depth, height, usedVolume)
+                VALUES (?, ?, ?, ?, ?, ?)
+              `, [
                 container.containerId?.trim() || '',
                 container.zone?.trim() || '',
                 Number(container.width) || 0,
                 Number(container.depth) || 0,
-                Number(container.height) || 0
-            ]);
+                Number(container.height) || 0,
+                Number(container.usedVolume) || 0
+              ]);
+              
         }
     
         return { message: `${containers.length} containers imported` };
     }
+
+
+    async placeItem(item, location) {
+        // Update item's containerId in the database
+        await run(
+            'UPDATE items SET containerId = ? WHERE itemId = ?',
+            [location.containerId, item.itemId]
+        );
     
+        // Calculate volume of the item (assuming rectangular)
+        const itemVolume = item.width * item.depth * item.height;
+    
+        // Update the container's used volume
+        await run(
+            'UPDATE containers SET usedVolume = usedVolume + ? WHERE containerId = ?',
+            [itemVolume, location.containerId]
+        );
+    
+        // Log the action
+        await this.logAction('place', item.itemId, 'system');
+    
+        return { success: true };
+    }
+    
+    //async getStorageLayout() {
+    //    const containers = await query('SELECT * FROM containers');
+    //    const items = await query('SELECT * FROM items');
+    //    return { containers, items };
+    //}
+    
+    async getStorageLayout() {
+        const containers = await query('SELECT * FROM containers');
+        const items = await query('SELECT * FROM items');
+    
+        const containerMap = new Map();
+    
+        for (const item of items) {
+            if (!containerMap.has(item.containerId)) {
+                containerMap.set(item.containerId, []);
+            }
+            containerMap.get(item.containerId).push(item);
+        }
+    
+        const layout = containers.map(container => {
+            const containerVolume = container.width * container.depth * container.height;
+            const usedVolume = container.usedVolume || 0;
+            const remainingVolume = containerVolume - usedVolume;
+    
+            return {
+                containerId: container.containerId,
+                zone: container.zone,
+                size: remainingVolume,
+                empty: usedVolume === 0,
+                location: { containerId: container.containerId }
+            };
+        });
+    
+        return layout;
+    }
+    
+
+async addItemToStorage(item) {
+    const containers = await query('SELECT * FROM containers');
+    const storageLayout = { containers };
+    const suggestion = suggestPlacement(item, storageLayout);
+    
+
+  if (suggestion.action === 'place') {
+    await this.placeItem(item, suggestion.location);
+    return {
+      status: 'success',
+      location: suggestion.location,
+      message: suggestion.reason
+    };
+  }
+
+  return {
+    status: 'failed',
+    message: suggestion.reason
+  };
+}
+
     
 
     async placeItems(data) {

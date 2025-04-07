@@ -165,4 +165,16 @@ router.get('/stats/containers', controller.getContainerStats.bind(controller));
 router.get('/stats/critical', controller.getCriticalItems.bind(controller));
 router.get('/stats/waste', controller.getWasteStats.bind(controller));
 
+router.post('/place', async (req, res) => {
+    try {
+        const item = req.body;
+        const result = await cargoService.addItemToStorage(item);
+        res.json(result);
+    } catch (error) {
+        console.error('Error placing item:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 module.exports = router;

@@ -241,6 +241,74 @@ label {
     background: #2563EB;
 }
 
+.placement-section {
+  margin-top: 2rem;
+  text-align: center;
+  color: #fff;
+}
+
+.form-card {
+  background: rgba(0, 0, 20, 0.7);
+  padding: 2rem;
+  margin: 2rem auto;
+  border-radius: 16px;
+  max-width: 800px;
+  border: 1px solid rgba(100, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(100, 255, 255, 0.2);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  font-weight: 500;
+  color: #ccf;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"] {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: none;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+input::placeholder {
+  color: #aaa;
+}
+
+button[type="submit"] {
+  background: #00ccff;
+  color: #000;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #00ffff;
+}
+
+.result-box {
+  margin-top: 1rem;
+  color: #9f9;
+  font-weight: 500;
+}
+
+
 /* Animations */
 @keyframes slide-up {
     from { opacity: 0; transform: translateY(20px); }
@@ -506,8 +574,31 @@ label {
             <span>Processing command...</span>
         </div>
     </section>
+
+    <section class="placement-section">
+        <h2>Suggest Placement for New Item</h2>
+        <form id="placementForm">
+          <div class="form-card">
+            <div class="form-grid">
+              <label>Item ID:<input type="text" name="itemId" required></label>
+              <label>Name:<input type="text" name="name" required></label>
+              <label>Width:<input type="number" name="width" required></label>
+              <label>Depth:<input type="number" name="depth" required></label>
+              <label>Height:<input type="number" name="height" required></label>
+              <label>Priority:<input type="number" name="priority" required></label>
+              <label>Expiry Date:<input type="date" name="expiryDate"></label>
+              <label>Usage Limit:<input type="number" name="usageLimit" required></label>
+              <label>Preferred Zone:<input type="text" name="preferredZone"></label>
+            </div>
+            <button type="submit">Suggest & Place</button>
+            <div id="placementResult" class="result-box"></div>
+          </div>
+        </form>
+      </section>
+      
+
 </main>
-</div>
+
 
 <!-- Modals -->
 <!-- Import Modal -->
@@ -1210,6 +1301,51 @@ const loadSystemStats = async () => {
             logToConsole('Last system check: ' + new Date().toISOString(), 'info');
             logToConsole('System ready for operations', 'success');
         }, 1000);
+
+        document.getElementById('placementForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const form = e.target;
+  const item = {
+    itemId: form.itemId.value,
+    name: form.name.value,
+    width: Number(form.width.value),
+    depth: Number(form.depth.value),
+    height: Number(form.height.value),
+    priority: Number(form.priority.value),
+    expiryDate: form.expiryDate.value || 'N/A',
+    usageLimit: Number(form.usageLimit.value),
+    preferredZone: form.preferredZone.value
+  };
+
+  try {
+    const res = await fetch('/place', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+    const data = await res.json();
+
+    console.log('Server response:', data);
+
+
+    const resultDiv = document.getElementById('placementResult');
+    if (data.status === 'success') {
+      resultDiv.innerHTML = `<strong>Placed in:</strong> ${data.location?.containerId || 'Unknown'} (${data.message || data.reason || 'Placement successful'})<br>Redirecting...`;
+      form.reset();
+      setTimeout(() => {
+        window.location.href = '/storage-layout';
+      }, 1500);
+    } else {
+      resultDiv.innerHTML = `<strong>Failed:</strong> ${data.message || data.reason || 'Unknown error'}`;
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('placementResult').innerText = 'Error suggesting placement.';
+  }
+});
+
+    
     </script>
 </body>
 </html> 
