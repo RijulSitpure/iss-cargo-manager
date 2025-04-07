@@ -45,10 +45,15 @@ const placeItems = (items, containers) => {
 
 function suggestPlacement(item, storageLayout) {
     const { containers } = storageLayout;
-    const zonesByPriority = ['A', 'B', 'C'];
     const itemVolume = item.width * item.depth * item.height;
 
-    for (const zone of zonesByPriority) {
+    // Start with preferredZone if available
+    const preferred = item.preferredZone?.trim();
+    const zonesToCheck = preferred
+        ? [preferred]
+        : [...new Set(containers.map(c => c.zone?.trim()))]; // All available zones
+
+    for (const zone of zonesToCheck) {
         const suitableContainer = containers.find(container => {
             const containerZone = container.zone?.trim();
             const containerVolume = container.width * container.depth * container.height;

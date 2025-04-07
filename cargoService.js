@@ -61,27 +61,36 @@ class CargoService {
     }
 
 
-    async placeItem(item, location) {
-        // Update item's containerId in the database
+    async placeItem(item, placement) {
+        const containerId = placement.location.containerId;
+    
+        // Insert a record into the placements table
         await run(
-            'UPDATE items SET containerId = ? WHERE itemId = ?',
-            [location.containerId, item.itemId]
+            `INSERT INTO placements (itemId, containerId) VALUES (?, ?)`,
+            [item.itemId, containerId]
         );
     
-        // Calculate volume of the item (assuming rectangular)
+        // Calculate the item's volume
         const itemVolume = item.width * item.depth * item.height;
     
-        // Update the container's used volume
+        // Fetch current used volume of the container (safe fallback to 0)
+        const container = await get(`SELECT usedVolume FROM containers WHERE containerId = ?`, [containerId]);
+        const currentVolume = typeof container?.usedVolume === 'number'
+            ? container.usedVolume
+            : parseFloat(container?.usedVolume) || 0;
+    
+        // Update container's used volume
         await run(
-            'UPDATE containers SET usedVolume = usedVolume + ? WHERE containerId = ?',
-            [itemVolume, location.containerId]
+            `UPDATE containers SET usedVolume = ? WHERE containerId = ?`,
+            [currentVolume + itemVolume, containerId]
         );
     
         // Log the action
         await this.logAction('place', item.itemId, 'system');
     
-        return { success: true };
+        return { success: true, message: placement.message };
     }
+    
     
     //async getStorageLayout() {
     //    const containers = await query('SELECT * FROM containers');
@@ -124,7 +133,7 @@ async addItemToStorage(item) {
     const containers = await query('SELECT * FROM containers');
     const storageLayout = { containers };
     const suggestion = suggestPlacement(item, storageLayout);
-    
+     
 
   if (suggestion.action === 'place') {
     await this.placeItem(item, suggestion.location);
